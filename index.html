@@ -23,7 +23,6 @@ h1{
   margin:0 auto;
 }
 
-/* 👉 ARROW AT TOP (12 O'CLOCK) */
 #pointer{
   position:absolute;
   top:-10px;
@@ -40,17 +39,36 @@ canvas{
 }
 
 button{
-  margin-top:20px;
+  margin-top:18px;
   padding:15px 30px;
-  font-size:20px;
-  background:#28a745;
-  color:#fff;
+  font-size:18px;
   border:none;
   border-radius:10px;
+  cursor:pointer;
 }
 
-button:disabled{
+#spinBtn{
+  background:#28a745;
+  color:#fff;
+}
+
+#spinBtn:disabled{
   background:#888;
+}
+
+#subscribeBtn{
+  background:#ff0000;
+  color:white;
+}
+
+#subscribeBtn:hover{
+  background:#cc0000;
+}
+
+#note{
+  margin-top:12px;
+  font-size:14px;
+  color:#333;
 }
 
 #result{
@@ -70,7 +88,19 @@ button:disabled{
   <canvas id="wheel" width="300" height="300"></canvas>
 </div>
 
-<button id="spinBtn">SPIN</button>
+<!-- SPIN BUTTON (LOCKED INITIALLY) -->
+<button id="spinBtn" disabled>🔒 पहले Subscribe करें</button>
+
+<!-- SUBSCRIBE BUTTON -->
+<br>
+<button id="subscribeBtn">
+  🔔 हमारे YouTube चैनल को Subscribe करें
+</button>
+
+<div id="note">
+  📢 Subscribe करने के बाद वापस आकर Spin करें
+</div>
+
 <p id="result"></p>
 
 <audio id="spinSound"></audio>
@@ -99,14 +129,12 @@ const ctx = canvas.getContext("2d");
 const center = 150;
 const radius = 140;
 
-// Start with first slice centered at TOP (12 O'CLOCK)
-// For this, we need to rotate by -90 degrees (-π/2 radians)
-let angle = -Math.PI/2;
+let angle = -Math.PI/2; // TOP aligned
 let spinning = false;
 
 const slice = 2 * Math.PI / gifts.length;
 
-/* ---------- DRAW ---------- */
+/* ---------- DRAW WHEEL ---------- */
 function drawWheel(){
   ctx.clearRect(0,0,300,300);
 
@@ -117,7 +145,7 @@ function drawWheel(){
     ctx.beginPath();
     ctx.moveTo(center,center);
     ctx.arc(center,center,radius,start,end);
-    ctx.fillStyle = colors[i];
+    ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
 
     ctx.save();
@@ -126,7 +154,6 @@ function drawWheel(){
     ctx.fillStyle="#fff";
     ctx.font="14px Arial";
     ctx.textAlign="center";
-    // Adjust text position to be readable
     ctx.fillText(gifts[i], radius/2, 5);
     ctx.restore();
   }
@@ -134,8 +161,32 @@ function drawWheel(){
 
 drawWheel();
 
+/* ---------- CHECK SUBSCRIBE STATUS ---------- */
+const spinBtn = document.getElementById("spinBtn");
+
+if(localStorage.getItem("subscribed") === "yes"){
+  spinBtn.disabled = false;
+  spinBtn.innerText = "SPIN";
+}
+
+/* ---------- SUBSCRIBE BUTTON ---------- */
+document.getElementById("subscribeBtn").onclick = function(){
+  // mark as subscribed (client-side, legal)
+  localStorage.setItem("subscribed","yes");
+
+  // unlock spin
+  spinBtn.disabled = false;
+  spinBtn.innerText = "SPIN";
+
+  // open YouTube channel
+  window.open(
+    "https://www.youtube.com/@R-digitalway?sub_confirmation=1",
+    "_blank"
+  );
+};
+
 /* ---------- SPIN ---------- */
-document.getElementById("spinBtn").onclick = () => {
+spinBtn.onclick = () => {
 
   if(localStorage.getItem("spinned")){
     alert("❌ आप पहले ही स्पिन कर चुके हैं");
@@ -144,23 +195,15 @@ document.getElementById("spinBtn").onclick = () => {
   if(spinning) return;
   spinning = true;
 
-  // 🔊 sound
   const sound = document.getElementById("spinSound");
   sound.src = "https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3";
   sound.currentTime = 0;
   sound.play().catch(()=>{});
 
-  // 🎯 winner decided FIRST
   const winIndex = Math.floor(Math.random() * gifts.length);
-  
-  // 👉 Calculate angle so that winning slice center comes to TOP (π/2 offset)
-  // We need to rotate the wheel so that the winning slice's center (-π/2 + winIndex*slice + slice/2)
-  // comes to -π/2 (TOP position)
-  // But we'll add multiple rotations for visual effect
+
   const winSliceCenter = -Math.PI/2 + winIndex * slice + slice/2;
-  const targetPosition = -Math.PI/2; // TOP position
-  
-  // The angle to rotate = current position - target position + multiple rotations
+  const targetPosition = -Math.PI/2;
   const target = winSliceCenter - targetPosition - 6 * Math.PI;
 
   const startAngle = angle;
@@ -180,10 +223,10 @@ document.getElementById("spinBtn").onclick = () => {
     } else {
       spinning = false;
       localStorage.setItem("spinned","yes");
-      document.getElementById("spinBtn").disabled = true;
+      spinBtn.disabled = true;
 
-      document.getElementById("result").innerText =
-        "🎉 आपको मिला: " + gifts[winIndex];
+      document.getElementById("result").innerHTML =
+        "🎉 आपको मिला: <b>" + gifts[winIndex] + "</b>";
     }
   }
 
