@@ -25,10 +25,10 @@ h1{
 
 #pointer{
   position:absolute;
-  top:-5px;
+  top:-8px;
   left:50%;
   transform:translateX(-50%);
-  font-size:34px;
+  font-size:36px;
   color:#e60000;
   z-index:10;
 }
@@ -72,9 +72,7 @@ button:disabled{
 <button id="spinBtn">SPIN</button>
 <p id="result"></p>
 
-<audio id="spinSound" preload="auto">
-  <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
-</audio>
+<audio id="spinSound" preload="auto"></audio>
 
 <script>
 /* ========= CONFIG ========= */
@@ -102,8 +100,9 @@ const radius = 140;
 
 let currentAngle = 0;
 let spinning = false;
+
 const slice = 2 * Math.PI / gifts.length;
-const OFFSET = -Math.PI / 2; // top
+const OFFSET = -Math.PI / 2; // top reference
 
 /* ---------- DRAW ---------- */
 function drawWheel(){
@@ -133,7 +132,7 @@ function drawWheel(){
 drawWheel();
 
 /* ---------- SPIN ---------- */
-document.getElementById("spinBtn").onclick = () => {
+document.getElementById("spinBtn").addEventListener("click", () => {
 
   if(localStorage.getItem("spinned")){
     alert("❌ आप पहले ही स्पिन कर चुके हैं");
@@ -142,17 +141,19 @@ document.getElementById("spinBtn").onclick = () => {
   if(spinning) return;
   spinning = true;
 
-  // 🔊 sound
+  /* 🔊 SOUND – guaranteed */
   const sound = document.getElementById("spinSound");
+  sound.src = "https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3";
   sound.currentTime = 0;
-  sound.play();
+  sound.play().catch(()=>{}); // silent fail safe
 
-  // 🎯 WINNER FIX (THIS IS THE KEY)
+  /* 🎯 WINNER (CENTER OF SLICE) */
   const winIndex = Math.floor(Math.random() * gifts.length);
 
-  // target angle so that winning slice comes to TOP
+  // 👉 center of slice = + slice/2
   const targetAngle =
     (gifts.length - winIndex) * slice +
+    slice / 2 +
     6 * Math.PI * 2; // extra rounds
 
   const startAngle = currentAngle;
@@ -163,7 +164,7 @@ document.getElementById("spinBtn").onclick = () => {
     if(!startTime) startTime = time;
     const progress = Math.min((time - startTime) / duration, 1);
 
-    // ease out
+    // smooth ease-out
     const ease = 1 - Math.pow(1 - progress, 3);
     currentAngle = startAngle + (targetAngle * ease);
 
@@ -182,7 +183,7 @@ document.getElementById("spinBtn").onclick = () => {
   }
 
   requestAnimationFrame(animate);
-};
+});
 </script>
 
 </body>
