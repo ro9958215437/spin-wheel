@@ -11,25 +11,31 @@ body{
   background:#fff3cd;
   font-family:Arial;
   text-align:center;
-  position:relative;
 }
 
 h1{
-  margin-top:20px;
+  margin:20px 0;
+}
+
+#wrapper{
+  position:relative;
+  width:300px;
+  margin:0 auto;
 }
 
 #pointer{
   position:absolute;
-  top:75px;
+  top:-5px;
   left:50%;
   transform:translateX(-50%);
   font-size:34px;
-  color:red;
+  color:#e60000;
   z-index:10;
 }
 
-#wheel{
-  margin-top:20px;
+canvas{
+  display:block;
+  margin:0 auto;
 }
 
 button{
@@ -37,13 +43,13 @@ button{
   padding:15px 30px;
   font-size:20px;
   background:#28a745;
-  color:white;
+  color:#fff;
   border:none;
   border-radius:10px;
 }
 
 button:disabled{
-  background:gray;
+  background:#888;
 }
 
 #result{
@@ -58,13 +64,12 @@ button:disabled{
 
 <h1>🎁 घुमाओ और इनाम जीतो 🎁</h1>
 
-<div id="pointer">🔻</div>
+<div id="wrapper">
+  <div id="pointer">🔻</div>
+  <canvas id="wheel" width="300" height="300"></canvas>
+</div>
 
-<canvas id="wheel" width="300" height="300"></canvas>
-
-<br>
 <button id="spinBtn">SPIN</button>
-
 <p id="result"></p>
 
 <audio id="spinSound" preload="auto">
@@ -72,7 +77,7 @@ button:disabled{
 </audio>
 
 <script>
-/* ================= CONFIG ================= */
+/* ========= CONFIG ========= */
 const gifts = [
   "₹10 की छूट",
   "फ्री चॉकलेट 🍫",
@@ -80,41 +85,47 @@ const gifts = [
   "अगली बार फिर कोशिश करें",
   "फ्री कोल्ड ड्रिंक 🥤"
 ];
-/* ========================================= */
+
+const colors = [
+  "#ff6384",
+  "#36a2eb",
+  "#ffce56",
+  "#4bc0c0",
+  "#9966ff"
+];
+/* ========================= */
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const center = 150;
 const radius = 140;
 
-let startAngle = 0;
+let currentAngle = 0;
 let spinning = false;
+const slice = 2 * Math.PI / gifts.length;
+const OFFSET = -Math.PI / 2; // top
 
-// 🔑 IMPORTANT: wheel always starts from TOP (-90°)
-const OFFSET = -Math.PI / 2;
-
-/* ---------- DRAW WHEEL ---------- */
+/* ---------- DRAW ---------- */
 function drawWheel(){
-  const slice = 2 * Math.PI / gifts.length;
+  ctx.clearRect(0,0,300,300);
 
-  for(let i = 0; i < gifts.length; i++){
-    const start = startAngle + i * slice + OFFSET;
+  for(let i=0;i<gifts.length;i++){
+    const start = currentAngle + i * slice + OFFSET;
     const end   = start + slice;
 
     ctx.beginPath();
-    ctx.fillStyle = i % 2 === 0 ? "#ff6384" : "#36a2eb";
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, radius, start, end);
+    ctx.moveTo(center,center);
+    ctx.arc(center,center,radius,start,end);
+    ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
 
-    // text
     ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(start + slice / 2);
-    ctx.fillStyle = "#fff";
-    ctx.font = "14px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(gifts[i], radius / 2, 5);
+    ctx.translate(center,center);
+    ctx.rotate(start + slice/2);
+    ctx.fillStyle="#fff";
+    ctx.font="14px Arial";
+    ctx.textAlign="center";
+    ctx.fillText(gifts[i], radius/2, 5);
     ctx.restore();
   }
 }
@@ -122,56 +133,56 @@ function drawWheel(){
 drawWheel();
 
 /* ---------- SPIN ---------- */
-document.getElementById("spinBtn").addEventListener("click", () => {
+document.getElementById("spinBtn").onclick = () => {
 
   if(localStorage.getItem("spinned")){
     alert("❌ आप पहले ही स्पिन कर चुके हैं");
     return;
   }
-
   if(spinning) return;
   spinning = true;
 
+  // 🔊 sound
   const sound = document.getElementById("spinSound");
   sound.currentTime = 0;
   sound.play();
 
-  const totalSpin = Math.random() * 360 + 1440; // 4+ rounds
+  // 🎯 WINNER FIX (THIS IS THE KEY)
+  const winIndex = Math.floor(Math.random() * gifts.length);
+
+  // target angle so that winning slice comes to TOP
+  const targetAngle =
+    (gifts.length - winIndex) * slice +
+    6 * Math.PI * 2; // extra rounds
+
+  const startAngle = currentAngle;
   const duration = 3000;
-  let start = null;
+  let startTime = null;
 
-  function animate(timestamp){
-    if(!start) start = timestamp;
-    const progress = timestamp - start;
+  function animate(time){
+    if(!startTime) startTime = time;
+    const progress = Math.min((time - startTime) / duration, 1);
 
-    const angle = totalSpin * (1 - progress / duration);
-    startAngle += angle * Math.PI / 180;
+    // ease out
+    const ease = 1 - Math.pow(1 - progress, 3);
+    currentAngle = startAngle + (targetAngle * ease);
 
-    ctx.clearRect(0,0,300,300);
     drawWheel();
 
-    if(progress < duration){
+    if(progress < 1){
       requestAnimationFrame(animate);
     } else {
       spinning = false;
       localStorage.setItem("spinned","yes");
       document.getElementById("spinBtn").disabled = true;
 
-      /* 🎯 FINAL & 100% CORRECT RESULT LOGIC */
-      const slice = 2 * Math.PI / gifts.length;
-
-      let normalized =
-        (startAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-
-      let index = Math.floor(normalized / slice);
-
       document.getElementById("result").innerText =
-        "🎉 आपको मिला: " + gifts[index];
+        "🎉 आपको मिला: " + gifts[winIndex];
     }
   }
 
   requestAnimationFrame(animate);
-});
+};
 </script>
 
 </body>
