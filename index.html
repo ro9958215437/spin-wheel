@@ -23,12 +23,12 @@ h1{
   margin:0 auto;
 }
 
-/* 👉 ARROW AT RIGHT (3 O'CLOCK) */
+/* 👉 ARROW AT TOP (12 O'CLOCK) */
 #pointer{
   position:absolute;
-  top:50%;
-  right:-18px;
-  transform:translateY(-50%);
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%);
   font-size:36px;
   color:#e60000;
   z-index:10;
@@ -66,8 +66,8 @@ button:disabled{
 <h1>🎁 घुमाओ और इनाम जीतो 🎁</h1>
 
 <div id="wrapper">
-  <canvas id="wheel" width="300" height="300"></canvas>
   <div id="pointer">🔻</div>
+  <canvas id="wheel" width="300" height="300"></canvas>
 </div>
 
 <button id="spinBtn">SPIN</button>
@@ -99,7 +99,9 @@ const ctx = canvas.getContext("2d");
 const center = 150;
 const radius = 140;
 
-let angle = 0;
+// Start with first slice centered at TOP (12 O'CLOCK)
+// For this, we need to rotate by -90 degrees (-π/2 radians)
+let angle = -Math.PI/2;
 let spinning = false;
 
 const slice = 2 * Math.PI / gifts.length;
@@ -124,6 +126,7 @@ function drawWheel(){
     ctx.fillStyle="#fff";
     ctx.font="14px Arial";
     ctx.textAlign="center";
+    // Adjust text position to be readable
     ctx.fillText(gifts[i], radius/2, 5);
     ctx.restore();
   }
@@ -149,12 +152,16 @@ document.getElementById("spinBtn").onclick = () => {
 
   // 🎯 winner decided FIRST
   const winIndex = Math.floor(Math.random() * gifts.length);
-
-  // 👉 CENTER of winning slice comes to RIGHT (0 rad)
-  const target =
-    (gifts.length - winIndex) * slice +
-    slice / 2 +
-    6 * Math.PI * 2;
+  
+  // 👉 Calculate angle so that winning slice center comes to TOP (π/2 offset)
+  // We need to rotate the wheel so that the winning slice's center (-π/2 + winIndex*slice + slice/2)
+  // comes to -π/2 (TOP position)
+  // But we'll add multiple rotations for visual effect
+  const winSliceCenter = -Math.PI/2 + winIndex * slice + slice/2;
+  const targetPosition = -Math.PI/2; // TOP position
+  
+  // The angle to rotate = current position - target position + multiple rotations
+  const target = winSliceCenter - targetPosition - 6 * Math.PI;
 
   const startAngle = angle;
   const duration = 3000;
@@ -165,7 +172,7 @@ document.getElementById("spinBtn").onclick = () => {
     const p = Math.min((t - startTime) / duration, 1);
     const ease = 1 - Math.pow(1 - p, 3);
 
-    angle = startAngle + target * ease;
+    angle = startAngle - target * ease;
     drawWheel();
 
     if(p < 1){
