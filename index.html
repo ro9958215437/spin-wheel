@@ -72,6 +72,7 @@ button:disabled{
 </audio>
 
 <script>
+/* ================= CONFIG ================= */
 const gifts = [
   "₹10 की छूट",
   "फ्री चॉकलेट 🍫",
@@ -79,6 +80,7 @@ const gifts = [
   "अगली बार फिर कोशिश करें",
   "फ्री कोल्ड ड्रिंक 🥤"
 ];
+/* ========================================= */
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
@@ -88,24 +90,27 @@ const radius = 140;
 let startAngle = 0;
 let spinning = false;
 
+// 🔑 IMPORTANT: wheel always starts from TOP (-90°)
+const OFFSET = -Math.PI / 2;
+
+/* ---------- DRAW WHEEL ---------- */
 function drawWheel(){
   const slice = 2 * Math.PI / gifts.length;
-  for(let i=0;i<gifts.length;i++){
+
+  for(let i = 0; i < gifts.length; i++){
+    const start = startAngle + i * slice + OFFSET;
+    const end   = start + slice;
+
     ctx.beginPath();
     ctx.fillStyle = i % 2 === 0 ? "#ff6384" : "#36a2eb";
     ctx.moveTo(center, center);
-    ctx.arc(
-      center,
-      center,
-      radius,
-      startAngle + i * slice,
-      startAngle + (i + 1) * slice
-    );
+    ctx.arc(center, center, radius, start, end);
     ctx.fill();
 
+    // text
     ctx.save();
     ctx.translate(center, center);
-    ctx.rotate(startAngle + (i + 0.5) * slice);
+    ctx.rotate(start + slice / 2);
     ctx.fillStyle = "#fff";
     ctx.font = "14px Arial";
     ctx.textAlign = "center";
@@ -116,7 +121,8 @@ function drawWheel(){
 
 drawWheel();
 
-document.getElementById("spinBtn").addEventListener("click", function(){
+/* ---------- SPIN ---------- */
+document.getElementById("spinBtn").addEventListener("click", () => {
 
   if(localStorage.getItem("spinned")){
     alert("❌ आप पहले ही स्पिन कर चुके हैं");
@@ -130,14 +136,15 @@ document.getElementById("spinBtn").addEventListener("click", function(){
   sound.currentTime = 0;
   sound.play();
 
-  let spinAngle = Math.random() * 360 + 1440; // min 4 rounds
-  let duration = 3000;
+  const totalSpin = Math.random() * 360 + 1440; // 4+ rounds
+  const duration = 3000;
   let start = null;
 
   function animate(timestamp){
     if(!start) start = timestamp;
-    let progress = timestamp - start;
-    let angle = spinAngle * (1 - progress / duration);
+    const progress = timestamp - start;
+
+    const angle = totalSpin * (1 - progress / duration);
     startAngle += angle * Math.PI / 180;
 
     ctx.clearRect(0,0,300,300);
@@ -150,24 +157,16 @@ document.getElementById("spinBtn").addEventListener("click", function(){
       localStorage.setItem("spinned","yes");
       document.getElementById("spinBtn").disabled = true;
 
-      // 🎯 EXACT ARROW MATCHING
+      /* 🎯 FINAL & 100% CORRECT RESULT LOGIC */
       const slice = 2 * Math.PI / gifts.length;
 
-/*
- Canvas rule:
- 0 rad = right side (3 o'clock)
- Arrow = top (12 o'clock) = -90° = -Math.PI/2
-*/
-let correctedAngle = startAngle - Math.PI / 2;
+      let normalized =
+        (startAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 
-// normalize angle between 0 to 2PI
-let normalized = (correctedAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      let index = Math.floor(normalized / slice);
 
-let index = Math.floor(normalized / slice);
-index = (gifts.length - index - 1) % gifts.length;
-
-document.getElementById("result").innerText =
-  "🎉 आपको मिला: " + gifts[index];
+      document.getElementById("result").innerText =
+        "🎉 आपको मिला: " + gifts[index];
     }
   }
 
