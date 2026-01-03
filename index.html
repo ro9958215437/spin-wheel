@@ -152,11 +152,22 @@ document.getElementById("spinBtn").addEventListener("click", function(){
 
       // 🎯 EXACT ARROW MATCHING
       const slice = 2 * Math.PI / gifts.length;
-      let finalAngle = (startAngle + Math.PI / 2) % (2 * Math.PI);
-      let index = Math.floor((2 * Math.PI - finalAngle) / slice) % gifts.length;
 
-      document.getElementById("result").innerText =
-        "🎉 आपको मिला: " + gifts[index];
+/*
+ Canvas rule:
+ 0 rad = right side (3 o'clock)
+ Arrow = top (12 o'clock) = -90° = -Math.PI/2
+*/
+let correctedAngle = startAngle - Math.PI / 2;
+
+// normalize angle between 0 to 2PI
+let normalized = (correctedAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+
+let index = Math.floor(normalized / slice);
+index = (gifts.length - index - 1) % gifts.length;
+
+document.getElementById("result").innerText =
+  "🎉 आपको मिला: " + gifts[index];
     }
   }
 
